@@ -17,6 +17,16 @@ const searchResultsSection = document.getElementById('search-results-section');
 const searchResultsGrid = document.getElementById('search-results-grid');
 const resultsCount = document.getElementById('results-count');
 const mediaCard = document.getElementById('media-card');
+const mediaThumbContainer = document.getElementById('media-thumb-container');
+const coverOfficialBadge = document.getElementById('cover-official-badge');
+const officialMetaBadge = document.getElementById('official-meta-badge');
+const metadataEditorBox = document.getElementById('metadata-editor-box');
+const metaSourceLabel = document.getElementById('meta-source-label');
+const metaTitleInput = document.getElementById('meta-title-input');
+const metaArtistInput = document.getElementById('meta-artist-input');
+const metaAlbumInput = document.getElementById('meta-album-input');
+const metaYearInput = document.getElementById('meta-year-input');
+const metaGenreInput = document.getElementById('meta-genre-input');
 const mediaBadgeContainer = document.getElementById('media-badge-container');
 const mediaBadge = document.getElementById('media-badge');
 const mediaBadgeText = document.getElementById('media-badge-text');
@@ -245,7 +255,6 @@ function displaySearchResults(results) {
 
 // Display Media Card (Supports both Single Media and Playlist)
 function displayMediaCard(data) {
-    mediaThumbnail.src = data.thumbnail;
     mediaTitle.textContent = data.title;
     mediaAuthor.querySelector('span').textContent = data.author;
 
@@ -255,6 +264,14 @@ function displayMediaCard(data) {
             mediaBadgeContainer.classList.remove('hidden');
             mediaBadgeText.textContent = `PLAYLIST (${data.track_count} CANCIONES)`;
         }
+        if (officialMetaBadge) officialMetaBadge.classList.add('hidden');
+        if (metadataEditorBox) metadataEditorBox.classList.add('hidden');
+        if (coverOfficialBadge) coverOfficialBadge.classList.add('hidden');
+        if (mediaThumbContainer) {
+            mediaThumbContainer.classList.remove('aspect-square');
+            mediaThumbContainer.classList.add('aspect-video');
+        }
+        mediaThumbnail.src = data.thumbnail;
         mediaDuration.textContent = `${data.track_count} canciones`;
 
         // Renderizar lista previa de canciones
@@ -284,6 +301,45 @@ function displayMediaCard(data) {
         if (mediaBadgeContainer) mediaBadgeContainer.classList.add('hidden');
         if (playlistTracksBox) playlistTracksBox.classList.add('hidden');
         mediaDuration.textContent = data.duration_string || '00:00';
+
+        const meta = data.official_metadata || {};
+
+        if (metaTitleInput) metaTitleInput.value = meta.title || data.title || '';
+        if (metaArtistInput) metaArtistInput.value = meta.artist || data.author || '';
+        if (metaAlbumInput) metaAlbumInput.value = meta.album || 'Single';
+        if (metaYearInput) metaYearInput.value = meta.year || '';
+        if (metaGenreInput) metaGenreInput.value = meta.genre || '';
+
+        if (meta.source && metaSourceLabel) {
+            metaSourceLabel.textContent = meta.source.toUpperCase();
+        }
+
+        if (officialMetaBadge) {
+            if (meta.found_official) {
+                officialMetaBadge.innerHTML = '<i class="fa-solid fa-circle-check"></i><span>Carátula Oficial y Metadatos de Álbum Encontrados</span>';
+                officialMetaBadge.className = 'inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+            } else {
+                officialMetaBadge.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i><span>Metadatos Listos para Descarga</span>';
+                officialMetaBadge.className = 'inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-brand-500/20 text-brand-300 border border-brand-500/30';
+            }
+            officialMetaBadge.classList.remove('hidden');
+        }
+
+        if (metadataEditorBox) metadataEditorBox.classList.remove('hidden');
+
+        // Mostrar carátula oficial si está disponible
+        if (meta.cover_url) {
+            mediaThumbnail.src = meta.cover_url;
+            if (coverOfficialBadge) coverOfficialBadge.classList.remove('hidden');
+        } else {
+            mediaThumbnail.src = data.thumbnail;
+            if (coverOfficialBadge) coverOfficialBadge.classList.add('hidden');
+        }
+
+        if (mediaThumbContainer) {
+            mediaThumbContainer.classList.add('aspect-square');
+            mediaThumbContainer.classList.remove('aspect-video');
+        }
     }
 
     // Render Video Quality Options
@@ -321,17 +377,40 @@ function displayMediaCard(data) {
 // Switch between Audio and Video tabs
 function switchFormatTab(type) {
     currentMediaType = type;
+    const meta = (currentMediaData && currentMediaData.official_metadata) ? currentMediaData.official_metadata : null;
 
     if (type === 'audio') {
         tabAudio.className = 'tab-btn flex-1 pb-3 text-sm font-semibold flex items-center justify-center gap-2 border-b-2 border-brand-500 text-brand-400 transition';
         tabVideo.className = 'tab-btn flex-1 pb-3 text-sm font-semibold flex items-center justify-center gap-2 border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition';
         audioOptions.classList.remove('hidden');
         videoOptions.classList.add('hidden');
+
+        if (currentMediaData && !currentMediaData.is_playlist) {
+            if (metadataEditorBox) metadataEditorBox.classList.remove('hidden');
+            if (mediaThumbContainer) {
+                mediaThumbContainer.classList.add('aspect-square');
+                mediaThumbContainer.classList.remove('aspect-video');
+            }
+            if (meta && meta.cover_url) {
+                mediaThumbnail.src = meta.cover_url;
+                if (coverOfficialBadge) coverOfficialBadge.classList.remove('hidden');
+            }
+        }
     } else {
         tabVideo.className = 'tab-btn flex-1 pb-3 text-sm font-semibold flex items-center justify-center gap-2 border-b-2 border-brand-500 text-brand-400 transition';
         tabAudio.className = 'tab-btn flex-1 pb-3 text-sm font-semibold flex items-center justify-center gap-2 border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition';
         videoOptions.classList.remove('hidden');
         audioOptions.classList.add('hidden');
+
+        if (metadataEditorBox) metadataEditorBox.classList.add('hidden');
+        if (mediaThumbContainer) {
+            mediaThumbContainer.classList.remove('aspect-square');
+            mediaThumbContainer.classList.add('aspect-video');
+        }
+        if (currentMediaData) {
+            mediaThumbnail.src = currentMediaData.thumbnail;
+        }
+        if (coverOfficialBadge) coverOfficialBadge.classList.add('hidden');
     }
 
     updateDownloadButtonLabel();
@@ -352,13 +431,13 @@ function updateDownloadButtonLabel() {
     const isPl = currentMediaData && currentMediaData.is_playlist;
     if (isPl) {
         if (currentMediaType === 'audio') {
-            btnDownloadText.textContent = `Descargar Playlist en .ZIP (${selectedAudioFormat.toUpperCase()} - ${selectedAudioQuality} kbps)`;
+            btnDownloadText.textContent = `Descargar Playlist con Metadatos en .ZIP (${selectedAudioFormat.toUpperCase()} - ${selectedAudioQuality} kbps)`;
         } else {
             btnDownloadText.textContent = `Descargar Playlist en .ZIP (MP4 - ${selectedVideoQuality}p)`;
         }
     } else {
         if (currentMediaType === 'audio') {
-            btnDownloadText.textContent = `Descargar Audio (${selectedAudioFormat.toUpperCase()} - ${selectedAudioQuality} kbps)`;
+            btnDownloadText.textContent = `Descargar con Carátula Oficial (${selectedAudioFormat.toUpperCase()} - ${selectedAudioQuality} kbps)`;
         } else {
             btnDownloadText.textContent = `Descargar Video (MP4 - ${selectedVideoQuality}p)`;
         }
@@ -370,12 +449,20 @@ async function triggerDownload() {
     if (!currentMediaData) return;
 
     const isPl = !!currentMediaData.is_playlist;
+    const meta = currentMediaData.official_metadata || {};
+
     const payload = {
         url: currentMediaData.webpage_url,
         media_type: currentMediaType,
         quality: currentMediaType === 'audio' ? selectedAudioQuality : selectedVideoQuality,
         audio_format: selectedAudioFormat,
-        is_playlist: isPl
+        is_playlist: isPl,
+        title: metaTitleInput && metaTitleInput.value ? metaTitleInput.value.trim() : (meta.title || currentMediaData.title),
+        artist: metaArtistInput && metaArtistInput.value ? metaArtistInput.value.trim() : (meta.artist || currentMediaData.author),
+        album: metaAlbumInput && metaAlbumInput.value ? metaAlbumInput.value.trim() : (meta.album || 'Single'),
+        year: metaYearInput && metaYearInput.value ? metaYearInput.value.trim() : (meta.year || ''),
+        genre: metaGenreInput && metaGenreInput.value ? metaGenreInput.value.trim() : (meta.genre || ''),
+        cover_url: meta.cover_url || null
     };
 
     btnStartDownload.disabled = true;
@@ -455,11 +542,12 @@ function pollDownloadProgress(taskId, payload, isPlaylist = false) {
                 
                 if (isPlaylist) {
                     progressStatusTitle.textContent = '¡Playlist Completada!';
-                    progressStatusStep.textContent = `Se empaquetaron ${data.tracks_count || currentMediaData.track_count} canciones en un archivo .ZIP.`;
+                    progressStatusStep.textContent = `Se empaquetaron ${data.tracks_count || currentMediaData.track_count} canciones con carátula oficial y metadatos en archivo .ZIP.`;
                     saveFileLabel.textContent = `Guardar Playlist ZIP (${data.size_mb} MB)`;
                 } else {
-                    progressStatusTitle.textContent = '¡Conversión Completada!';
-                    progressStatusStep.textContent = `Archivo listo: ${data.title}.${data.extension}`;
+                    progressStatusTitle.textContent = '¡Descarga Lista con Carátula Oficial y Metadatos!';
+                    const albumDetail = data.album ? ` | Álbum: ${data.album}` : '';
+                    progressStatusStep.textContent = `Archivo listo: ${data.title}${albumDetail} (.${data.extension})`;
                     saveFileLabel.textContent = `Guardar ${data.extension.toUpperCase()} (${data.size_mb} MB)`;
                 }
 
@@ -479,12 +567,20 @@ function pollDownloadProgress(taskId, payload, isPlaylist = false) {
                 autoLink.click();
                 autoLink.remove();
 
-                showToast(isPlaylist ? '¡Playlist descargada y comprimida en ZIP!' : '¡Descarga finalizada con éxito!', 'success');
+                showToast(isPlaylist ? '¡Playlist descargada con metadatos oficiales en ZIP!' : '¡Música descargada con carátula oficial y metadatos de álbum!', 'success');
 
-                // Guardar en historial
+                // Guardar en historial con carátula oficial
+                const histCover = (data.metadata && data.metadata.cover_url) 
+                    ? data.metadata.cover_url 
+                    : (currentMediaData.official_metadata && currentMediaData.official_metadata.cover_url) 
+                        ? currentMediaData.official_metadata.cover_url 
+                        : currentMediaData.thumbnail;
+
                 addToHistory({
                     title: data.title,
-                    thumbnail: currentMediaData.thumbnail,
+                    thumbnail: histCover,
+                    album: data.album || (data.metadata ? data.metadata.album : null),
+                    artist: data.artist || (data.metadata ? data.metadata.artist : null),
                     format: isPlaylist ? 'ZIP (Playlist)' : data.extension.toUpperCase(),
                     quality: payload.media_type === 'audio' ? `${payload.quality}k` : `${payload.quality}p`,
                     size: `${data.size_mb} MB`,
@@ -589,11 +685,13 @@ function renderHistory() {
     history.forEach(item => {
         const div = document.createElement('div');
         div.className = 'history-item bg-dark-800/50 border border-slate-800 hover:border-slate-700 p-3 rounded-xl flex items-center justify-between gap-3 text-xs';
+        const albumInfo = item.album ? `<p class="text-[11px] text-brand-300/80 truncate">${item.album}${item.artist ? ' &bull; ' + item.artist : ''}</p>` : '';
         div.innerHTML = `
             <div class="flex items-center gap-3 min-w-0">
-                <img src="${item.thumbnail}" class="w-12 h-9 rounded object-cover shrink-0 bg-dark-900">
+                <img src="${item.thumbnail}" class="w-11 h-11 rounded-lg object-cover shrink-0 bg-dark-900 border border-slate-700/60 shadow-sm">
                 <div class="min-w-0">
                     <p class="font-semibold text-white truncate">${item.title}</p>
+                    ${albumInfo}
                     <div class="flex items-center gap-2 text-slate-400 mt-0.5">
                         <span class="px-1.5 py-0.2 rounded bg-brand-500/20 text-brand-300 font-bold text-[10px]">${item.format} ${item.quality}</span>
                         <span>${item.size}</span>

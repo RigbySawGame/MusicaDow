@@ -7,6 +7,13 @@ import threading
 import static_ffmpeg
 import yt_dlp
 
+from backend.services.metadata_service import (
+    search_official_metadata,
+    get_processed_cover_bytes,
+    apply_metadata_to_file,
+    clean_song_title
+)
+
 # Asegurar que los binarios de FFmpeg estén disponibles en PATH
 try:
     static_ffmpeg.add_paths()
@@ -29,7 +36,6 @@ def is_playlist_url(url: str) -> bool:
     url = url.strip()
     if "playlist?list=" in url:
         return True
-    # Si contiene list= pero no es un mix infinito de radio (RD) ni subidas de usuario únicas (UL)
     if "list=" in url and "list=RD" not in url and "list=UL" not in url:
         return True
     return False
@@ -40,18 +46,15 @@ def clean_youtube_url(url: str, force_playlist: bool = False) -> str:
         return url
     url = url.strip()
 
-    # Si es playlist o se pide forzar playlist
     if force_playlist or "playlist?list=" in url or ("list=" in url and "watch?v=" not in url):
         match = re.search(r'list=([a-zA-Z0-9_-]+)', url)
         if match:
             return f"https://www.youtube.com/playlist?list={match.group(1)}"
         return url
 
-    # Si es video individual pero contiene lista
     if "watch?v=" in url:
         v_match = re.search(r'v=([a-zA-Z0-9_-]{11})', url)
         if v_match:
-            # Si contiene list=PL..., podríamos conservar la URL si el usuario quiere playlist
             if force_playlist:
                 l_match = re.search(r'list=([a-zA-Z0-9_-]+)', url)
                 if l_match:
@@ -101,7 +104,7 @@ def format_duration(seconds):
     return f"{minutes:02}:{secs:02}"
 
 def sanitize_filename(filename):
-    return re.sub(r'[\\/*?:"<>|]', "", filename)
+    return re.sub(r'[\\/*?:"<>|]', "", filename).strip()
 
 def get_video_info(url: str):
     """Obtiene metadatos del video o de la playlist sin descargar."""
@@ -134,9 +137,10 @@ def get_video_info(url: str):
             # Formatear lista de canciones para la vista previa
             preview_tracks = []
             for i, e in enumerate(valid_entries[:15], 1):
+                clean_title_str = clean_song_title(e.get("title", f"Pista {i}"))
                 preview_tracks.append({
                     "index": i,
-                    "title": e.get("title", f"Pista {i}"),
+                    "title": clean_title_str or e.get("title", f"Pista {i}"),
                     "duration": format_duration(e.get("duration")),
                     "id": e.get("id")
                 })
@@ -188,11 +192,16 @@ def get_video_info(url: str):
         if not common_resolutions and sorted_resolutions:
             common_resolutions = sorted_resolutions[:4]
 
+        # Buscar metadatos oficiales (Álbum, Artista, Carátula Oficial, Año, etc.)
+        raw_title = info.get("title", "Sin título")
+        uploader = info.get("uploader") or info.get("channel", "Desconocido")
+        official_meta = search_official_metadata(raw_title=raw_title, uploader=uploader, yt_info=info)
+
         return {
             "is_playlist": False,
             "id": info.get("id"),
             "title": info.get("title", "Sin título"),
-            "author": info.get("uploader") or info.get("channel", "Desconocido"),
+            "author": uploader,
             "duration": info.get("duration", 0),
             "duration_string": format_duration(info.get("duration", 0)),
             "thumbnail": info.get("thumbnail"),
@@ -205,7 +214,8 @@ def get_video_info(url: str):
                 {"label": "256 kbps (Muy alta)", "value": "256"},
                 {"label": "192 kbps (Alta)", "value": "192"},
                 {"label": "128 kbps (Estándar)", "value": "128"},
-            ]
+            ],
+            "official_metadata": official_meta
         }
 
 def search_youtube(query: str, limit: int = 6):
@@ -248,7 +258,6 @@ def make_progress_hook(task_id: str, track_index: int = 1, total_tracks: int = 1
             eta = d.get("eta")
             eta_str = f"{eta}s" if eta is not None else "--"
 
-            # Si es playlist, calcular progreso global
             if total_tracks > 1:
                 overall = round(((track_index - 1) / total_tracks * 100) + (percentage / total_tracks), 1)
                 step = f"Pista {track_index} de {total_tracks} ({percentage}%)"
@@ -267,10 +276,10 @@ def make_progress_hook(task_id: str, track_index: int = 1, total_tracks: int = 1
             }
         elif d["status"] == "finished":
             if total_tracks > 1:
-                step = f"Pista {track_index} de {total_tracks}: Convirtiendo formato..."
+                step = f"Pista {track_index} de {total_tracks}: Convirtiendo e incrustando metadatos..."
                 overall = round(((track_index - 1 + 0.95) / total_tracks) * 100, 1)
             else:
-                step = "Convirtiendo y procesando formato..."
+                step = "Convirtiendo formato e incrustando carátula oficial..."
                 overall = 95
 
             tasks_progress[task_id] = {
@@ -284,8 +293,15 @@ def make_progress_hook(task_id: str, track_index: int = 1, total_tracks: int = 1
             }
     return hook
 
-def start_download_task(task_id: str, url: str, media_type: str, quality: str, audio_format: str = "mp3"):
-    """Inicia la descarga de un video individual en segundo plano."""
+def start_download_task(
+    task_id: str,
+    url: str,
+    media_type: str,
+    quality: str,
+    audio_format: str = "mp3",
+    custom_metadata: dict = None
+):
+    """Inicia la descarga de un video individual en segundo plano e incrusta metadatos y carátula oficial."""
     clean_url = clean_youtube_url(url, force_playlist=False)
 
     def run():
@@ -299,7 +315,7 @@ def start_download_task(task_id: str, url: str, media_type: str, quality: str, a
                 "error": None
             }
 
-            filename_template = f"{task_id}_%(title)s.%(ext)s"
+            filename_template = f"{task_id}_raw_%(title)s.%(ext)s"
             outtmpl = os.path.join(DOWNLOADS_DIR, filename_template)
 
             hook = make_progress_hook(task_id, 1, 1)
@@ -342,12 +358,13 @@ def start_download_task(task_id: str, url: str, media_type: str, quality: str, a
 
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(clean_url, download=True)
-                title = sanitize_filename(info.get("title", "audio_video"))
+                raw_title = info.get("title", "audio_video")
+                uploader = info.get("uploader") or info.get("channel", "")
 
                 ext = audio_format if media_type == "audio" else "mp4"
                 final_filename = None
                 for fname in os.listdir(DOWNLOADS_DIR):
-                    if fname.startswith(task_id):
+                    if fname.startswith(f"{task_id}_raw_"):
                         final_filename = fname
                         break
 
@@ -356,15 +373,58 @@ def start_download_task(task_id: str, url: str, media_type: str, quality: str, a
 
                 final_path = os.path.join(DOWNLOADS_DIR, final_filename)
 
+                # Resolver metadatos oficiales y carátula oficial
+                tasks_progress[task_id]["status"] = "processing"
+                tasks_progress[task_id]["step"] = "Incrustando carátula oficial y metadatos de álbum..."
+                tasks_progress[task_id]["progress"] = 96
+
+                meta = dict(custom_metadata) if custom_metadata else {}
+                # Si no se aportaron metadatos manuales completos, buscar metadatos oficiales
+                if not meta.get("title") or not meta.get("artist") or not meta.get("album"):
+                    fetched = search_official_metadata(raw_title=raw_title, uploader=uploader, yt_info=info)
+                    for k, v in fetched.items():
+                        if not meta.get(k):
+                            meta[k] = v
+
+                # Obtener bytes de la carátula oficial en alta definición
+                cover_url = meta.get("cover_url")
+                fallback_thumb = info.get("thumbnail")
+                cover_bytes = get_processed_cover_bytes(cover_url=cover_url, fallback_thumbnail_url=fallback_thumb)
+
+                # Incrustar en el archivo (ID3v2.3 en MP3, MP4 Tags en M4A/MP4, etc.)
+                apply_metadata_to_file(final_path, meta, cover_bytes=cover_bytes)
+
+                # Renombrar archivo a formato limpio: "{task_id}_{Artista} - {Canción}.{ext}"
+                clean_artist = sanitize_filename(meta.get("artist") or uploader or "Musica")
+                clean_name = sanitize_filename(meta.get("title") or clean_song_title(raw_title) or "Pista")
+                new_filename = f"{task_id}_{clean_artist} - {clean_name}.{ext}"
+                new_path = os.path.join(DOWNLOADS_DIR, new_filename)
+
+                if new_path != final_path:
+                    try:
+                        if os.path.exists(new_path):
+                            os.remove(new_path)
+                        os.replace(final_path, new_path)
+                        final_path = new_path
+                        final_filename = new_filename
+                    except Exception as ren_err:
+                        print(f"Aviso al renombrar archivo: {ren_err}")
+
+                display_title = f"{meta.get('artist')} - {meta.get('title')}" if meta.get("artist") and meta.get("title") else raw_title
+
                 tasks_progress[task_id] = {
                     "status": "completed",
                     "progress": 100,
-                    "step": "¡Completado! Listo para descargar.",
+                    "step": "¡Completado con carátula oficial y metadatos de álbum! Listo para descargar.",
                     "file_path": final_path,
                     "filename": final_filename,
-                    "title": title,
+                    "title": display_title,
+                    "artist": meta.get("artist"),
+                    "album": meta.get("album"),
                     "extension": ext,
                     "size_mb": round(os.path.getsize(final_path) / (1024 * 1024), 2),
+                    "metadata": meta,
+                    "has_cover": bool(cover_bytes),
                     "error": None
                 }
 
@@ -379,8 +439,14 @@ def start_download_task(task_id: str, url: str, media_type: str, quality: str, a
     thread = threading.Thread(target=run, daemon=True)
     thread.start()
 
-def start_playlist_download_task(task_id: str, url: str, media_type: str, quality: str, audio_format: str = "mp3"):
-    """Inicia la descarga de una playlist completa y la comprime en archivo ZIP."""
+def start_playlist_download_task(
+    task_id: str,
+    url: str,
+    media_type: str,
+    quality: str,
+    audio_format: str = "mp3"
+):
+    """Inicia la descarga de una playlist completa, incrusta metadatos y carátula a cada canción y comprime en ZIP."""
     clean_url = clean_youtube_url(url, force_playlist=True)
 
     def run():
@@ -411,16 +477,17 @@ def start_playlist_download_task(task_id: str, url: str, media_type: str, qualit
             pl_title = sanitize_filename(pl_info.get("title") or "Playlist")
             tasks_progress[task_id]["total_tracks"] = total_tracks
 
-            downloaded_files = []
+            # 2. Descargar e incrustar metadatos a cada pista
+            ext = audio_format if media_type == "audio" else "mp4"
 
-            # 2. Descargar cada pista
             for index, entry in enumerate(entries, 1):
                 track_id = entry.get("id")
                 track_url = entry.get("url") if entry.get("url", "").startswith("http") else f"https://www.youtube.com/watch?v={track_id}"
                 track_title = sanitize_filename(entry.get("title") or f"Pista_{index}")
 
                 hook = make_progress_hook(task_id, index, total_tracks)
-                outtmpl = os.path.join(task_dir, f"{index:02d} - %(title)s.%(ext)s")
+                raw_track_prefix = f"track_{index:03d}_"
+                outtmpl = os.path.join(task_dir, f"{raw_track_prefix}%(title)s.%(ext)s")
 
                 track_base_opts = get_base_ydl_opts(is_playlist=False)
 
@@ -461,14 +528,49 @@ def start_playlist_download_task(task_id: str, url: str, media_type: str, qualit
 
                 try:
                     with yt_dlp.YoutubeDL(track_opts) as ydl:
-                        ydl.extract_info(track_url, download=True)
+                        track_info = ydl.extract_info(track_url, download=True)
+
+                    # Buscar el archivo descargado para esta pista
+                    downloaded_track_file = None
+                    for f in os.listdir(task_dir):
+                        if f.startswith(raw_track_prefix):
+                            downloaded_track_file = os.path.join(task_dir, f)
+                            break
+
+                    if downloaded_track_file and os.path.exists(downloaded_track_file):
+                        # Buscar metadatos oficiales y carátula para esta canción
+                        meta = search_official_metadata(
+                            raw_title=track_info.get("title") or entry.get("title", f"Pista {index}"),
+                            uploader=track_info.get("uploader") or entry.get("uploader", ""),
+                            yt_info=track_info
+                        )
+                        meta["track_number"] = index
+
+                        cover_bytes = get_processed_cover_bytes(
+                            cover_url=meta.get("cover_url"),
+                            fallback_thumbnail_url=track_info.get("thumbnail") or entry.get("thumbnail")
+                        )
+
+                        # Incrustar metadatos y carátula oficial
+                        apply_metadata_to_file(downloaded_track_file, meta, cover_bytes=cover_bytes)
+
+                        # Renombrar dentro de la carpeta con nombre limpio numerado
+                        clean_artist = sanitize_filename(meta.get("artist") or "Artista")
+                        clean_song = sanitize_filename(meta.get("title") or track_title)
+                        clean_filename = f"{index:02d}. {clean_artist} - {clean_song}.{ext}"
+                        clean_path = os.path.join(task_dir, clean_filename)
+
+                        if clean_path != downloaded_track_file:
+                            if os.path.exists(clean_path):
+                                os.remove(clean_path)
+                            os.replace(downloaded_track_file, clean_path)
+
                 except Exception as track_err:
                     print(f"[Playlist] Error en pista {index} ({track_title}): {track_err}")
-                    # Continuar con las demás pistas de la lista
 
             # 3. Comprimir todos los archivos en un ZIP
             tasks_progress[task_id]["status"] = "processing"
-            tasks_progress[task_id]["step"] = "Comprimiendo pistas en archivo .ZIP..."
+            tasks_progress[task_id]["step"] = "Comprimiendo pistas con metadatos oficiales en archivo .ZIP..."
             tasks_progress[task_id]["progress"] = 98
 
             zip_filename = f"{task_id}_{pl_title}.zip"
@@ -479,11 +581,11 @@ def start_playlist_download_task(task_id: str, url: str, media_type: str, qualit
                 raise FileNotFoundError("No se pudo descargar ninguna de las pistas de la playlist.")
 
             with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
-                for file_name in files_to_zip:
+                for file_name in sorted(files_to_zip):
                     file_full_path = os.path.join(task_dir, file_name)
                     zipf.write(file_full_path, arcname=file_name)
 
-            # 4. Eliminar directorio temporal de canciones sueltas
+            # 4. Eliminar directorio temporal
             shutil.rmtree(task_dir, ignore_errors=True)
 
             size_mb = round(os.path.getsize(zip_path) / (1024 * 1024), 2)
@@ -491,7 +593,7 @@ def start_playlist_download_task(task_id: str, url: str, media_type: str, qualit
             tasks_progress[task_id] = {
                 "status": "completed",
                 "progress": 100,
-                "step": f"¡Playlist completada! {len(files_to_zip)} pistas descargadas en archivo .ZIP.",
+                "step": f"¡Playlist completada! {len(files_to_zip)} pistas con carátula y metadatos de álbum en archivo .ZIP.",
                 "file_path": zip_path,
                 "filename": zip_filename,
                 "title": pl_title,
@@ -503,7 +605,6 @@ def start_playlist_download_task(task_id: str, url: str, media_type: str, qualit
             }
 
         except Exception as e:
-            # Limpiar carpeta si hubo error crítico
             if os.path.exists(task_dir):
                 shutil.rmtree(task_dir, ignore_errors=True)
 

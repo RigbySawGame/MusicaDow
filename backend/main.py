@@ -44,6 +44,12 @@ class DownloadRequest(BaseModel):
     quality: str = "320"       # 320, 256, 192, 128 para audio; 1080, 720, 480, 360 para video
     audio_format: str = "mp3"  # mp3, m4a, wav
     is_playlist: bool = False  # True si se descarga la playlist completa en ZIP
+    title: Optional[str] = None
+    artist: Optional[str] = None
+    album: Optional[str] = None
+    year: Optional[str] = None
+    genre: Optional[str] = None
+    cover_url: Optional[str] = None
 
 @app.post("/api/info")
 async def api_get_info(req: InfoRequest):
@@ -69,6 +75,16 @@ async def api_start_download(req: DownloadRequest):
         raise HTTPException(status_code=400, detail="URL requerida")
     
     task_id = str(uuid.uuid4())[:8]
+    custom_meta = {
+        "title": req.title,
+        "artist": req.artist,
+        "album": req.album,
+        "year": req.year,
+        "genre": req.genre,
+        "cover_url": req.cover_url
+    }
+    custom_meta = {k: v.strip() for k, v in custom_meta.items() if v and v.strip()}
+
     if req.is_playlist:
         start_playlist_download_task(
             task_id=task_id,
@@ -83,7 +99,8 @@ async def api_start_download(req: DownloadRequest):
             url=req.url.strip(),
             media_type=req.media_type,
             quality=req.quality,
-            audio_format=req.audio_format
+            audio_format=req.audio_format,
+            custom_metadata=custom_meta
         )
     return {"success": True, "task_id": task_id}
 
