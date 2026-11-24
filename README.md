@@ -4,6 +4,17 @@ Aplicación web moderna y rápida para buscar y descargar música (MP3, M4A, WAV
 
 ---
 
+## 📥 Descargas (Releases)
+
+Puedes descargar la versión lista para usar en Windows sin necesidad de instalar Python:
+
+- ⬇️ **[Descargar MusicaDow.exe (Última versión)](https://github.com/RigbySawGame/MusicaDow/releases/latest/download/MusicaDow.exe)**
+- 📦 **[Ver todas las versiones (GitHub Releases)](https://github.com/RigbySawGame/MusicaDow/releases)**
+
+> **Nota:** Solo descarga `MusicaDow.exe` y ejecútalo directamente.
+
+---
+
 ## 🚀 Características
 
 - 🎧 **Música en Ultra Alta Calidad**: Conversión directa a MP3 hasta 320 kbps con carátula e información ID3.
