@@ -1,4 +1,5 @@
 import os
+import sys
 import re
 import uuid
 import shutil
@@ -14,16 +15,28 @@ from backend.services.metadata_service import (
     clean_song_title
 )
 
-# Asegurar que los binarios de FFmpeg estén disponibles en PATH
-try:
-    static_ffmpeg.add_paths()
-except Exception as e:
-    print(f"Advertencia al inicializar static_ffmpeg: {e}")
+# Asegurar que los binarios de FFmpeg estén disponibles en PATH tanto en desarrollo como en ejecutable compilado
+def init_ffmpeg():
+    if getattr(sys, "frozen", False):
+        bundle_bin = os.path.join(sys._MEIPASS, "static_ffmpeg", "bin", "win32")
+        if os.path.exists(bundle_bin):
+            os.environ["PATH"] = bundle_bin + os.pathsep + os.environ.get("PATH", "")
+    try:
+        static_ffmpeg.add_paths()
+    except Exception as e:
+        print(f"Advertencia al inicializar static_ffmpeg: {e}")
+
+init_ffmpeg()
 
 # Detectar ruta de Node.js para resolver desafíos JS de YouTube (EJS)
 NODE_PATH = shutil.which("node") or r"C:\Program Files\nodejs\node.exe"
 
-DOWNLOADS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "downloads")
+def get_app_dir():
+    if getattr(sys, "frozen", False):
+        return os.path.dirname(sys.executable)
+    return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+DOWNLOADS_DIR = os.path.join(get_app_dir(), "downloads")
 os.makedirs(DOWNLOADS_DIR, exist_ok=True)
 
 # Diccionario para almacenar el progreso de las tareas

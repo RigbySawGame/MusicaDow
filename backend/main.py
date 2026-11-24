@@ -1,4 +1,5 @@
 import os
+import sys
 import uuid
 import urllib.parse
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Query
@@ -135,7 +136,12 @@ async def api_download_file(filename: str):
     )
 
 # Servir Frontend
-FRONTEND_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "frontend")
+def get_bundle_dir():
+    if getattr(sys, "frozen", False):
+        return sys._MEIPASS
+    return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+FRONTEND_DIR = os.path.join(get_bundle_dir(), "frontend")
 if os.path.exists(FRONTEND_DIR):
     app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
 
