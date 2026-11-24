@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MusicaDow - Descargador de Música y Videos de YouTube</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f5f3ff',
+                            100: '#ede9fe',
+                            400: '#a78bfa',
+                            500: '#8b5cf6',
+                            600: '#7c3aed',
+                            700: '#6d28d9',
+                            900: '#4c1d95',
+                        },
+                        accent: {
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                        },
+                        dark: {
+                            900: '#0b0f19',
+                            800: '#111827',
+                            700: '#1f2937',
+                            600: '#374151'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="bg-dark-900 text-slate-100 min-h-screen flex flex-col font-['Plus_Jakarta_Sans',sans-serif] selection:bg-brand-500 selection:text-white relative overflow-x-hidden">
+
+    <!-- Background glow effects -->
+    <div class="fixed top-0 left-1/4 w-96 h-96 bg-brand-600/20 rounded-full blur-3xl pointer-events-none -z-10 animate-pulse"></div>
+    <div class="fixed bottom-10 right-1/4 w-96 h-96 bg-accent-500/15 rounded-full blur-3xl pointer-events-none -z-10 animate-pulse" style="animation-delay: 2s;"></div>
+
+    <!-- Header / Navbar -->
+    <header class="w-full border-b border-slate-800/80 bg-dark-900/80 backdrop-blur-md sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-accent-500 flex items-center justify-center shadow-lg shadow-brand-500/25">
+                    <i class="fa-solid fa-play text-white text-base"></i>
+                </div>
+                <div>
+                    <span class="text-xl font-extrabold bg-gradient-to-r from-white via-slate-100 to-slate-300 bg-clip-text text-transparent">Musica<span class="text-brand-400">Dow</span></span>
+                    <span class="text-[10px] px-1.5 py-0.5 rounded bg-brand-500/20 text-brand-300 font-semibold ml-1.5 border border-brand-500/30 uppercase tracking-wider">v1.0</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-4 text-sm font-medium text-slate-400">
+                <span class="hidden sm:inline-flex items-center gap-1.5 text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20 text-xs">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                    Servidor Activo
+                </span>
+                <a href="#features" class="hover:text-white transition-colors">Ventajas</a>
+                <a href="#history" class="hover:text-white transition-colors">Historial</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-8 sm:py-12 flex flex-col items-center">
+        
+        <!-- Hero Section -->
+        <div class="text-center max-w-2xl mx-auto mb-8">
+            <h1 class="text-3xl sm:text-5xl font-extrabold tracking-tight mb-4">
+                Descarga <span class="bg-gradient-to-r from-brand-400 via-purple-300 to-accent-400 bg-clip-text text-transparent">Música y Videos</span> al Instante
+            </h1>
+            <p class="text-slate-400 text-sm sm:text-base">
+                Convierte a MP3 de alta calidad (320kbps) o descarga videos en MP4 en resolución Full HD sin límites.
+            </p>
+        </div>
+
+        <!-- Search / URL Input Box -->
+        <div class="w-full bg-dark-800/80 border border-slate-700/60 rounded-2xl p-2 sm:p-3 shadow-2xl backdrop-blur-xl mb-8 transition-all focus-within:border-brand-500/70 focus-within:ring-4 focus-within:ring-brand-500/15">
+            <form id="search-form" class="flex flex-col sm:flex-row gap-2">
+                <div class="relative flex-1 flex items-center">
+                    <span class="absolute left-4 text-slate-400">
+                        <i class="fa-brands fa-youtube text-red-500 text-lg"></i>
+                    </span>
+                    <input 
+                        type="text" 
+                        id="url-input" 
+                        placeholder="Pega un enlace de YouTube o escribe el nombre de la canción..." 
+                        class="w-full bg-transparent pl-11 pr-24 py-3.5 text-sm sm:text-base text-white placeholder-slate-500 focus:outline-none"
+                        autocomplete="off"
+                        required
+                    />
+                    <button 
+                        type="button" 
+                        id="btn-paste" 
+                        class="absolute right-2 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-dark-700 hover:bg-dark-600 text-slate-300 hover:text-white transition border border-slate-600 flex items-center gap-1.5">
+                        <i class="fa-regular fa-clipboard"></i>
+                        <span>Pegar</span>
+                    </button>
+                </div>
+                <button 
+                    type="submit" 
+                    id="btn-search" 
+                    class="bg-gradient-to-r from-brand-600 to-brand-700 hover:from-brand-500 hover:to-brand-600 text-white font-semibold px-6 py-3.5 rounded-xl transition shadow-lg shadow-brand-600/30 flex items-center justify-center gap-2 group cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="fa-solid fa-bolt group-hover:scale-110 transition-transform"></i>
+                    <span>Analizar</span>
+                </button>
+            </form>
+        </div>
+
+        <!-- Notification Toast Box -->
+        <div id="toast-container" class="w-full max-w-md fixed bottom-6 right-6 z-50 flex flex-col gap-2"></div>
+
+        <!-- Loader Spinner -->
+        <div id="loader" class="hidden my-8 flex flex-col items-center gap-3">
+            <div class="w-10 h-10 border-4 border-brand-500/20 border-t-brand-500 rounded-full animate-spin"></div>
+            <p id="loader-text" class="text-sm font-medium text-slate-400">Consultando información de YouTube...</p>
+        </div>
+
+        <!-- Search Results Grid (When searching keywords) -->
+        <div id="search-results-section" class="w-full hidden mb-8">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-base font-bold text-slate-200 flex items-center gap-2">
+                    <i class="fa-solid fa-list-ul text-brand-400"></i> Resultados de Búsqueda
+                </h3>
+                <span id="results-count" class="text-xs text-slate-500"></span>
+            </div>
+            <div id="search-results-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <!-- Injected via JS -->
+            </div>
+        </div>
+
+        <!-- Video Detail & Download Options Card -->
+        <div id="media-card" class="w-full hidden bg-dark-800/90 border border-slate-700/80 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-xl mb-8">
+            <div class="p-5 sm:p-7 flex flex-col md:flex-row gap-6">
+                <!-- Thumbnail & Duration -->
+                <div class="relative md:w-72 shrink-0 group rounded-xl overflow-hidden bg-dark-900 border border-slate-700/60 aspect-video flex items-center justify-center">
+                    <img id="media-thumbnail" src="" alt="Thumbnail" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                    <span id="media-duration" class="absolute bottom-2.5 right-2.5 bg-dark-900/90 text-white text-xs font-semibold px-2 py-0.5 rounded-md backdrop-blur-md border border-slate-700/50"></span>
+                </div>
+
+                <!-- Info & Format Selector -->
+                <div class="flex-1 flex flex-col justify-between">
+                    <div>
+                        <!-- Playlist Badge -->
+                        <div id="media-badge-container" class="mb-2 hidden">
+                            <span id="media-badge" class="inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-brand-500/20 text-brand-300 border border-brand-500/30">
+                                <i class="fa-solid fa-list-check"></i>
+                                <span id="media-badge-text">PLAYLIST</span>
+                            </span>
+                        </div>
+                        <h2 id="media-title" class="text-lg sm:text-xl font-bold text-white line-clamp-2 mb-1.5 leading-snug"></h2>
+                        <p id="media-author" class="text-sm text-slate-400 flex items-center gap-2 mb-4">
+                            <i class="fa-solid fa-circle-user text-slate-500"></i>
+                            <span></span>
+                        </p>
+
+                        <!-- Playlist Tracks Preview Collapsible -->
+                        <div id="playlist-tracks-box" class="hidden mb-4 border border-slate-700/60 rounded-xl bg-dark-900/60 p-3">
+                            <button type="button" id="btn-toggle-tracks" class="w-full flex items-center justify-between text-xs text-slate-300 font-semibold hover:text-white transition">
+                                <span class="flex items-center gap-2">
+                                    <i class="fa-solid fa-layer-group text-brand-400"></i>
+                                    <span>Pistas de la lista (<span id="playlist-track-count">0</span>)</span>
+                                </span>
+                                <span id="playlist-toggle-icon" class="text-slate-500 transition-transform"><i class="fa-solid fa-chevron-down"></i></span>
+                            </button>
+                            <div id="playlist-tracks-list" class="hidden mt-2.5 pt-2.5 border-t border-slate-700/50 max-h-36 overflow-y-auto space-y-1.5 text-xs text-slate-400 pr-1">
+                                <!-- Injected via JS -->
+                            </div>
+                        </div>
+
+                        <!-- Format Type Tabs (Música vs Video) -->
+                        <div class="flex border-b border-slate-700/80 mb-5">
+                            <button 
+                                id="tab-audio" 
+                                class="tab-btn flex-1 pb-3 text-sm font-semibold flex items-center justify-center gap-2 border-b-2 border-brand-500 text-brand-400 transition"
+                                onclick="switchFormatTab('audio')">
+                                <i class="fa-solid fa-music"></i>
+                                <span>Música / Audio</span>
+                            </button>
+                            <button 
+                                id="tab-video" 
+                                class="tab-btn flex-1 pb-3 text-sm font-semibold flex items-center justify-center gap-2 border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition"
+                                onclick="switchFormatTab('video')">
+                                <i class="fa-solid fa-video"></i>
+                                <span>Video (MP4)</span>
+                            </button>
+                        </div>
+
+                        <!-- Audio Options -->
+                        <div id="audio-options" class="flex flex-col gap-3">
+                            <div class="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+                                <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Calidad de Audio:</label>
+                                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full sm:w-auto" id="audio-quality-buttons">
+                                    <button type="button" data-quality="320" class="quality-btn active px-3 py-1.5 rounded-lg border text-xs font-semibold">320 kbps</button>
+                                    <button type="button" data-quality="256" class="quality-btn px-3 py-1.5 rounded-lg border text-xs font-semibold">256 kbps</button>
+                                    <button type="button" data-quality="192" class="quality-btn px-3 py-1.5 rounded-lg border text-xs font-semibold">192 kbps</button>
+                                    <button type="button" data-quality="128" class="quality-btn px-3 py-1.5 rounded-lg border text-xs font-semibold">128 kbps</button>
+                                </div>
+                            </div>
+                            <div class="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between mt-2">
+                                <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Formato:</label>
+                                <div class="flex gap-2">
+                                    <label class="flex items-center gap-1.5 text-xs text-slate-300 cursor-pointer bg-dark-700/70 px-3 py-1.5 rounded-lg border border-slate-600/70">
+                                        <input type="radio" name="audio-format" value="mp3" checked class="accent-brand-500">
+                                        <span>MP3</span>
+                                    </label>
+                                    <label class="flex items-center gap-1.5 text-xs text-slate-300 cursor-pointer bg-dark-700/70 px-3 py-1.5 rounded-lg border border-slate-600/70">
+                                        <input type="radio" name="audio-format" value="m4a" class="accent-brand-500">
+                                        <span>M4A</span>
+                                    </label>
+                                    <label class="flex items-center gap-1.5 text-xs text-slate-300 cursor-pointer bg-dark-700/70 px-3 py-1.5 rounded-lg border border-slate-600/70">
+                                        <input type="radio" name="audio-format" value="wav" class="accent-brand-500">
+                                        <span>WAV</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Video Options -->
+                        <div id="video-options" class="hidden flex flex-col gap-3">
+                            <div class="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+                                <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Resolución de Video:</label>
+                                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full sm:w-auto" id="video-quality-buttons">
+                                    <!-- Injected via JS based on available resolutions -->
+                                </div>
+                            </div>
+                            <p class="text-xs text-slate-500 mt-1">Formato de salida: <strong>MP4 (H.264 + AAC)</strong> compatible con todos los reproductores y dispositivos.</p>
+                        </div>
+                    </div>
+
+                    <!-- Trigger Download Button -->
+                    <div class="mt-6 pt-4 border-t border-slate-700/60 flex flex-col sm:flex-row gap-3">
+                        <button 
+                            id="btn-start-download" 
+                            class="flex-1 bg-gradient-to-r from-brand-600 via-brand-500 to-accent-500 hover:from-brand-500 hover:to-accent-400 text-white font-bold py-3.5 px-6 rounded-xl shadow-lg shadow-brand-500/25 flex items-center justify-center gap-2.5 transition transform active:scale-98 cursor-pointer">
+                            <i class="fa-solid fa-cloud-arrow-down text-lg"></i>
+                            <span id="btn-download-text">Descargar Música (MP3)</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Download & Conversion Progress Box -->
+        <div id="progress-box" class="w-full hidden bg-dark-800/90 border border-brand-500/40 rounded-2xl p-6 shadow-2xl backdrop-blur-xl mb-8 relative overflow-hidden">
+            <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-brand-500/20 text-brand-400 flex items-center justify-center">
+                        <i class="fa-solid fa-rotate text-sm animate-spin" id="progress-icon"></i>
+                    </div>
+                    <div>
+                        <h4 id="progress-status-title" class="text-sm font-bold text-white">Procesando descarga...</h4>
+                        <p id="progress-status-step" class="text-xs text-slate-400">Iniciando conexión con el servidor...</p>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <span id="progress-percent" class="text-lg font-extrabold text-brand-400">0%</span>
+                    <p id="progress-speed" class="text-[11px] text-slate-500"></p>
+                </div>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="w-full bg-dark-900 rounded-full h-3 overflow-hidden border border-slate-700/60 p-0.5">
+                <div id="progress-bar-fill" class="bg-gradient-to-r from-brand-500 to-accent-400 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+
+            <!-- Completed Download Action (Hidden until ready) -->
+            <div id="progress-completed-actions" class="hidden mt-5 pt-4 border-t border-slate-700/60 flex flex-col sm:flex-row items-center gap-3">
+                <a 
+                    id="btn-save-file" 
+                    href="#" 
+                    download 
+                    class="w-full sm:w-auto flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3.5 px-6 rounded-xl shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2.5 transition transform active:scale-98">
+                    <i class="fa-solid fa-download text-lg"></i>
+                    <span id="save-file-label">Guardar Archivo</span>
+                </a>
+                <button 
+                    onclick="resetApp()" 
+                    class="w-full sm:w-auto bg-dark-700 hover:bg-dark-600 text-slate-300 font-semibold py-3.5 px-5 rounded-xl border border-slate-600 transition">
+                    Descargar Otro
+                </button>
+            </div>
+        </div>
+
+        <!-- Features / Benefits -->
+        <section id="features" class="w-full grid grid-cols-1 sm:grid-cols-3 gap-4 my-8">
+            <div class="bg-dark-800/40 border border-slate-800 p-5 rounded-xl flex items-start gap-3.5">
+                <div class="w-10 h-10 rounded-lg bg-purple-500/10 text-purple-400 flex items-center justify-center shrink-0">
+                    <i class="fa-solid fa-music"></i>
+                </div>
+                <div>
+                    <h4 class="text-sm font-bold text-white mb-1">Audio Ultra HQ</h4>
+                    <p class="text-xs text-slate-400">Conversión a MP3 en 320 kbps con carátula y metadatos integrados.</p>
+                </div>
+            </div>
+            <div class="bg-dark-800/40 border border-slate-800 p-5 rounded-xl flex items-start gap-3.5">
+                <div class="w-10 h-10 rounded-lg bg-sky-500/10 text-sky-400 flex items-center justify-center shrink-0">
+                    <i class="fa-solid fa-film"></i>
+                </div>
+                <div>
+                    <h4 class="text-sm font-bold text-white mb-1">Video en 1080p</h4>
+                    <p class="text-xs text-slate-400">Descarga videos en alta definición en formato universal MP4.</p>
+                </div>
+            </div>
+            <div class="bg-dark-800/40 border border-slate-800 p-5 rounded-xl flex items-start gap-3.5">
+                <div class="w-10 h-10 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center shrink-0">
+                    <i class="fa-solid fa-bolt"></i>
+                </div>
+                <div>
+                    <h4 class="text-sm font-bold text-white mb-1">Rápido y Sin Registro</h4>
+                    <p class="text-xs text-slate-400">Sin anuncios molestos, conversiones ilimitadas y 100% privado.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Session History Section -->
+        <section id="history" class="w-full mt-4">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-sm font-bold text-slate-300 flex items-center gap-2">
+                    <i class="fa-solid fa-clock-rotate-left text-slate-400"></i> Historial de Descargas Recientes
+                </h3>
+                <button onclick="clearHistory()" class="text-xs text-slate-500 hover:text-slate-300 transition">Borrar historial</button>
+            </div>
+            <div id="history-list" class="flex flex-col gap-2">
+                <div id="history-empty" class="text-center py-6 border border-dashed border-slate-800 rounded-xl text-slate-500 text-xs">
+                    No tienes descargas recientes en esta sesión.
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="w-full border-t border-slate-800/60 py-6 text-center text-xs text-slate-500 bg-dark-900/60">
+        <p>MusicaDow &bull; Herramienta de descarga para uso personal y educativo.</p>
+    </footer>
+
+    <!-- App Script -->
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

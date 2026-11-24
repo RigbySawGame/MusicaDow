@@ -1,0 +1,45 @@
+================================================================================
+                    MUSICADOW - INSTRUCCIONES DE INICIO
+================================================================================
+
+--------------------------------------------------------------------------------
+1. FORMA RAPIDA (1 SOLO CLIC)
+--------------------------------------------------------------------------------
+Haz doble clic sobre el archivo:
+run.bat
+
+(Esto iniciara el servidor listo para usarse en tu PC y en tu Tablet/Celular).
+
+
+--------------------------------------------------------------------------------
+2. FORMA MANUAL (DESDE LA TERMINAL: POWERSHELL O CMD)
+--------------------------------------------------------------------------------
+Abre una terminal dentro de esta carpeta (MusicaDow) y corre el comando deseado:
+
+A) Para usar SOLO en tu PC:
+.\venv\Scripts\python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000 --reload
+
+   -> En tu navegador abre: http://localhost:8000
+
+
+B) Para usar en tu PC y tambien en tu TABLET / CELULAR (en el mismo Wi-Fi):
+.\venv\Scripts\python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
+
+   -> En tu PC abre:             http://localhost:8000
+   -> En tu Tablet o Celular:    http://192.168.18.2:8000
+
+
+--------------------------------------------------------------------------------
+3. COMO DETENER EL SERVIDOR
+--------------------------------------------------------------------------------
+Presiona las teclas Ctrl + C en la ventana de la terminal.
+
+
+--------------------------------------------------------------------------------
+4. NOTA SOBRE LA IP SI CAMBIA DE RED WI-FI
+--------------------------------------------------------------------------------
+Si cambias de router o red Wi-Fi y no carga en tu tablet:
+1. Abre una consola y escribe: ipconfig
+2. Busca "Direccion IPv4" (ej. 192.168.x.x)
+3. En tu tablet entra a: http://<TU_NUEVA_IP>:8000
+================================================================================

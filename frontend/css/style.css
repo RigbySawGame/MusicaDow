@@ -1,0 +1,81 @@
+/* MusicaDow Custom Styling */
+
+:root {
+    color-scheme: dark;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+::-webkit-scrollbar-track {
+    background: #0b0f19;
+}
+::-webkit-scrollbar-thumb {
+    background: #1f2937;
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #374151;
+}
+
+/* Quality selector buttons */
+.quality-btn {
+    background-color: rgba(31, 41, 55, 0.6);
+    border-color: rgba(75, 85, 99, 0.4);
+    color: #94a3b8;
+    transition: all 0.2s ease-in-out;
+}
+
+.quality-btn:hover {
+    background-color: rgba(55, 65, 81, 0.8);
+    color: #f8fafc;
+    border-color: rgba(139, 92, 246, 0.4);
+}
+
+.quality-btn.active {
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.25), rgba(14, 165, 233, 0.25));
+    border-color: #8b5cf6;
+    color: #ffffff;
+    box-shadow: 0 0 12px rgba(139, 92, 246, 0.25);
+}
+
+/* Line clamp */
+.line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* Toast animations */
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes slideOutRight {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+}
+
+.toast {
+    animation: slideInRight 0.3s ease-out forwards;
+}
+
+.toast.hiding {
+    animation: slideOutRight 0.3s ease-in forwards;
+}
